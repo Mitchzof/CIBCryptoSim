@@ -29,7 +29,7 @@ def coin_static_hold(start_rank, stop_rank, weigh_by_cap = False):
 
 	return result
 
-def stock_static_hold(tickers, w=None):
+def stock_static_hold(tickers, w=None, short=False):
 	#Holds a portfolio of stocks with given weights (default = equal weighting)
 	def result(game):
 		#Calculate equal weights if nothing already set
@@ -49,17 +49,19 @@ def stock_static_hold(tickers, w=None):
 			for i in range(len(tickers)):
 				ticker = tickers[i]
 				allotment = allotments[i]
-				game.buy(ticker, allotment)
-
+				if not short:
+					game.buy(ticker, allotment)
+				else:
+					game.balances['USD'] = 0 #Only short!
+					game.short_sell(ticker, allotment)
 	return result
 
 
+short_vxx = stock_static_hold(['VXX'], w=[1], short=True)
+g3, r3 = fox.simulate(short_vxx,10000, start=dt.datetime(2017,1,1), title='Short VXX')
 top_10eq = coin_static_hold(0,10)
+g,r = fox.simulate(top_10eq,10000, start=dt.datetime(2017,1,1), title='Top 10 Crypto')
 hodl_nvda = stock_static_hold(['NVDA'],w=[1])
-print('Top 10 Crypto')
-g,r = fox.simulate(top_10eq,10000, start=dt.datetime(2017,1,1))
-print('NVDA Only')
-g2,r2 = fox.simulate(hodl_nvda,10000, start=dt.datetime(2017,1,1))
-
+g2,r2 = fox.simulate(hodl_nvda,10000, start=dt.datetime(2017,1,1), title='NVDA Hodl')
 
 

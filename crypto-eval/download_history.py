@@ -130,7 +130,7 @@ def save_stock_ticker_info(ticker_id, path=AV_TICKERDATA_DIR, try_cache = CACHE,
   full_path = os.path.join(path, "stock_"+ticker_id+'.csv')
   if try_cache and os.path.exists(full_path):
     return
-  fetch_url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={0}&outputsize=full&apikey={1}&datatype=csv"
+  fetch_url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={0}&outputsize=full&apikey={1}&datatype=csv"
   df = pd.read_csv(fetch_url.format(ticker_id, api_key))
   df['date'] = pd.to_datetime(df['timestamp'])
   df['asset_type'] = "stock"
