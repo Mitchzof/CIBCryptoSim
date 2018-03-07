@@ -12,7 +12,7 @@
 # datasource_<crypto/stock/etc>tickers.txt
 
 #TODOs
-#1. Add interval support once non-daily data is available  
+#1. Add interval support once non-daily data is available
 #2. Add aggregate support
 #3. Add command line args to override defaults
 
@@ -49,8 +49,9 @@ if not os.path.exists(factors_dir):
 #TODO - implement try/except for downloads
 
 CMC_TICKERLIST = os.path.join(DATA_FOLDER, 'cryptotickers.csv')
+
 def download_cmc(
-  stop_rank, 
+  stop_rank,
   save_loc=CMC_TICKERLIST):
   fetch_url = 'https://api.coinmarketcap.com/v1/ticker/?limit=' + str(stop_rank)
   df = pd.read_json(fetch_url)
@@ -59,7 +60,7 @@ def download_cmc(
 def get_cmc_tickers(try_cache=CACHE, path=CMC_TICKERLIST, stop_rank=STOP_RANK):
   if not (try_cache and os.path.exists(path)) and stop_rank is not None:
     download_cmc(stop_rank, save_loc=path)
-  
+
   return pd.read_csv(path)['id'].tolist()
 
 #Phase Crypto-2: Download historical data for each ticker.
@@ -100,7 +101,7 @@ def save_cmc_ticker_info(ticker_id, path=CMC_TICKERDATA_DIR, try_cache = CACHE, 
   df.to_csv(full_path, index=False, header=True, date_format="%Y, %m, %d, %H, %M")
 
 #Fetch data for all coins
-def save_all_cmc_ticker_info(ticker_list_path = None, ticker_list=None, wait_secs=None, 
+def save_all_cmc_ticker_info(ticker_list_path = None, ticker_list=None, wait_secs=None,
   path=CMC_TICKERDATA_DIR, try_cache=CACHE, start='20140101', end=None):
 
   if ticker_list == None:
@@ -178,8 +179,3 @@ if __name__ == "__main__":
   save_all_cmc_ticker_info(ticker_list = coins)
   print("Phase 2B: Fetching stock data...".format(len(stocks)))
   save_all_stock_ticker_info(stocks)
-
-
-
-
-
