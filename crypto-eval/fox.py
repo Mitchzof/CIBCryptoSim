@@ -8,6 +8,7 @@ CRYPTO_TICKERS = "./data/cryptotickers.csv"
 PRICES_DIR = "./data/prices"
 PRICES_PREFIX = "coin_"
 TRADE_EFFICIENCY = 0.99 #Assume 1% fees
+SHORT_EFFICIENCY = (1-TRADE_EFFICIENCY)+1 #Assume 1% fees
 STOP_LOSS = 0.80 #Not implemented yet: Sell off an order if it's below 80% of purchase (or above in the case of short)
 MIN_VOLUME = 10000 #Don't trade coins below this volume
 TIME_DELTA = dt.timedelta(days=1) #Interval between data points
@@ -53,8 +54,9 @@ class Game():
     #starting_balance - how much in USD
     #start/end - datetime objects
     #interval - datetime.timedelta object (should match data)
-    self.balances = dict() # ticker_id -> value
+    self.balances = dict() # ticker_id -> amount owned (in shares/coins, not USD)
     self.balances['USD'] = starting_balance
+
     for ticker in ticker_ids:
       self.balances[ticker] = 0
     self.now = start
@@ -83,11 +85,15 @@ class Game():
   #Gets current price of ticker_id, if not available it will average between nearest 2 previous and future prices
   def price_now(self, ticker_id):
     df = ticker_data[ticker_id]
+    if ticker_id in cryptotickers['name']:
+      use_col = 'close'
+    else:
+      use_col = 'adjusted_close'
     if self.now in df.index:
-      return df[df.index==self.now]['open'][0]
+      return df[df.index==self.now][use_col][0]
     else: #Can't sell today. Take average of closest price before and after.
       rows = abs(df.index-self.now).argsort()[:2] #Should return neighboring numbers, something like [5,6]
-      return df.iloc[rows,]['open'].mean()
+      return df.iloc[rows,][use_col].mean()
 
   #Calls price_now on each nonzero asset and sums it all up
   def get_portfolio_value(self):
@@ -107,23 +113,39 @@ class Game():
 
   #Buys an asset at price_now, does not take into account active trading days or whole numbers of shares for stocks
   def buy(self, ticker_id, amount_USD):
-    if amount_USD > self.balances['USD']:
-      raise ValueError("Purchase failed, insufficient balance")
+    #if amount_USD > self.balances['USD']:
+    #  raise ValueError("Purchase failed, insufficient USD balance")
     
     price_USD = self.price_now(ticker_id)
     amount_ticker = (amount_USD/price_USD)*TRADE_EFFICIENCY
-    print("Bought {0} of {1} for {2} each".format(amount_ticker,ticker_id,price_USD))
+    print("Bought {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
     self.balances[ticker_id] += amount_ticker
     self.balances['USD'] -= amount_USD
 
-  #Same as buy, but in reverse. Shorting is not thoroughly implented yet.
+  #Same as buy, but in reverse.
   def sell(self, ticker_id, amount_ticker):
-    #Shorting is allowed
-    price_USD = self.price_now(ticker_id)
-    amount_USD = (amount_ticker*price_USD)*TRADE_EFFICIENCY
-    print("Sold {0} of {1} for {2} each".format(amount_ticker,ticker_id,price_USD*TRADE_EFFICIENCY))
+    #if amount_ticker >  self.balances[ticker_id]:
+    #  raise ValueError("Sell failed, insufficient {0} balance".format(ticker_id))
+    price_USD = self.price_now(ticker_id)*TRADE_EFFICIENCY
+    amount_USD = (amount_ticker*price_USD)
+    print("Sold {0:.3f} {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
     self.balances[ticker_id] -= amount_ticker
     self.balances['USD'] += amount_USD
+
+  def short_sell(self, ticker_id, amount_USD):
+    price_USD = self.price_now(ticker_id)
+    amount_ticker = (amount_USD/price_USD)*SHORT_EFFICIENCY #more to cover = fee
+    print("Short sold {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
+    self.balances[ticker_id] -= amount_ticker
+    self.balances['USD'] += amount_USD
+
+  def short_buy(self, ticker_id, amount_ticker):
+    price_USD = self.price_now(ticker_id)
+    amount_USD = (amount_ticker*price_USD)*SHORT_EFFICIENCY #more to pay back = fee
+    print("Short bought {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
+    self.balances[ticker_id] += amount_ticker
+    self.balances['USD'] -= amount_USD
+
 
   #To depots/withdraw any assets, including but not limited to USD
   def adjust_balance(self, amount, ticker_id):
@@ -144,11 +166,12 @@ def simulate(
   interval=dt.timedelta(days=1),
   report_types = ['value'],
   report_freq = 1, #Whole number >0, in terms of game_interval
-  verbose = True):
+  verbose = True,
+  title="Untitled"):
   #Check for errors
   if report_freq < 1 or type(report_freq) != int:
     raise ValueError("Report Frequency is not aligned with game interval. Make sure report frequency is an int with value > 0")
-  print("Fox simulate start")
+  print("{0} : Fox simulate start".format(title))
   start_time = time.time()
 
   #Set default params
@@ -176,14 +199,14 @@ def simulate(
 
     #Print statement / progress interval
     if interval_num % 100 == 0:
-      print(str(game.now) + " : " + str(reports['value'][-1]))
+      print("{0} : {1:.3f}".format(game.now,reports['value'][-1]))
 
     #Maintain vars
     game.now += interval
     interval_num += 1
 
   #Sim over, return results
-  print(str(game.now) + " : " + str(reports['value'][-1]))
-  print("Simulation completed in {:.3f}s".format(time.time()-start_time))
+  print("{0} : {1:.3f}".format(game.now,reports['value'][-1]))
+  print("{0} : Fox simulate completed in {1:.3f}s\n".format(title, time.time()-start_time))
   return (game, reports)
 
