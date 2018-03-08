@@ -89,9 +89,7 @@ class Game():
   #Gets current price of ticker_id, if not available it will average between nearest 2 previous and future prices
   def price_now(self, ticker_id):
     df = ticker_data[ticker_id]
-    use_col = 'adjusted_close'
-    if ticker_id in cryptotickers['name']:
-      use_col = 'close'
+    use_col = 'close'
     if self.now in df.index:
       return df[df.index==self.now][use_col][0]
     else: #Can't sell today. Take average of closest price before and after.
@@ -122,7 +120,7 @@ class Game():
     price_USD = self.price_now(ticker_id)
     amount_ticker = (amount_USD/price_USD)*TRADE_EFFICIENCY
     dprint("Bought {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
-    
+
     #Update avg price, balances, and set correct stop loss
     entry_value_before = self.balances[ticker_id]*self.avg_price[ticker_id]
     entry_value_after = entry_value_before + amount_USD
@@ -131,7 +129,7 @@ class Game():
     self.balances['USD'] -= amount_USD
 
     #Stop loss currently takes most recent price and is not stacked
-    self.stop_loss[ticker_id] = STOP_LOSS*price_USD 
+    self.stop_loss[ticker_id] = STOP_LOSS*price_USD
 
   #Same as buy, but in reverse.
   def sell(self, ticker_id, amount_ticker):
@@ -140,7 +138,7 @@ class Game():
     price_USD = self.price_now(ticker_id)*TRADE_EFFICIENCY
     amount_USD = (amount_ticker*price_USD)
     dprint("Sold {0:.3f} {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
-    
+
     #Update balances. Avg price and stoploss not affected.
     self.balances[ticker_id] -= amount_ticker
     self.balances['USD'] += amount_USD
@@ -149,7 +147,7 @@ class Game():
     price_USD = self.price_now(ticker_id)
     amount_ticker = (amount_USD/price_USD)*SHORT_EFFICIENCY #more to cover = fee
     dprint("Short sold {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
-    
+
     #Update balances and average price. Set stop loss.
     entry_value_before = -1*self.balances[ticker_id]*self.avg_price[ticker_id] #neg*neg*pos = pos
     entry_value_after = entry_value_before + amount_USD*SHORT_EFFICIENCY #more positive

@@ -60,8 +60,8 @@ def stock_static_hold(tickers, w=None, short=False):
 def create_ranked(
 	start_rank, #Zero indexed, inclusive
 	stop_rank, #Zero indexed, exclusive
-	rebalance_ratio = 1.2, 
-	stop_loss = 0.8, 
+	rebalance_ratio = 1.2,
+	stop_loss = 0.8,
 	rebalance_interval=dt.timedelta(days=7)):
 
 	def ranked(game):
@@ -72,7 +72,7 @@ def create_ranked(
 			market = game.crypto_by_marketcap()
 			coins_of_interest = market['ticker_id'].tolist()[start_rank:stop_rank]
 			target_per_coin = math.floor(100*game.get_portfolio_value()/len(coins_of_interest))/100.0 #floor to safe divide to lowest cent USD
-			
+
 			#Rebalance and stop loss
 			for coin, amount in game.balances.items():
 				if amount <= 0 or coin == 'USD':
@@ -116,24 +116,34 @@ hodl_nvda = stock_static_hold(['NVDA'],w=[1])
 g2,r2 = fox.simulate(hodl_nvda, start_money, start=start_date, title='NVDA')
 short_vxx = stock_static_hold(['VXX'], w=[1], short=True)
 g3, r3 = fox.simulate(short_vxx, start_money, start=start_date, title='Short VXX')
-hodl_voo = stock_static_hold(['VOO'],w=[1])
-g4, r4 = fox.simulate(hodl_voo, start_money, start=start_date, title='SP500 (VOO)')
-top_10eq_rb = create_ranked(0,10)
+#hodl_voo = stock_static_hold(['VOO'],w=[1])
+#g4, r4 = fox.simulate(hodl_voo, start_money, start=start_date, title='SP500 (VOO)')
+"""top_10eq_rb = create_ranked(0,10)
 g5, r5 = fox.simulate(top_10eq_rb, start_money, start=start_date, title='Top 10 Crypto (Weekly re.)')
 shit_150_500eq = coin_static_hold(150,500)
 g6, r6 = fox.simulate(shit_150_500eq, start_money, start=start_date, title='Crypto 150-500 (Static)')
 shit_150_500eq_rb = create_ranked(150,500)
-g7, r7 = fox.simulate(shit_150_500eq_rb, start_money, start=start_date, title='Crypto 150-500 (Weekly re.)')
+g7, r7 = fox.simulate(shit_150_500eq_rb, start_money, start=start_date, title='Crypto 150-500 (Weekly re.)')"""
 
-reports = [r,r2,r3,r4,r5,r6,r7]
-titles = [g.title, g2.title, g3.title, g4.title, g5.title, g6.title,g7.title]
+reports = [r,r2,r3]
+titles = [g.title, g2.title, g3.title]
 returns = chart.returns_df(reports, titles)
 returns.plot(grid=True, title='Normalized Returns')
 returns.plot(grid=True, logy=True, title='Normalized Returns (Log Scale)')
 plt.show()
-alpha_m = chart.alpha_df(returns, g4.title)
-alpha_m.plot(grid=True, title='Monthly Alpha (vs SP500)')
-plt.show()
-alpha_a = chart.alpha_df(returns, g4.title, resample='A')
-alpha_a.plot(grid=True, title='Yearly Alpha (vs SP500)')
-plt.show()
+#alpha_m = chart.alpha_df(returns, g4.title)
+#alpha_m.plot(grid=True, title='Monthly Alpha (vs SP500)')
+#plt.show()
+#alpha_a = chart.alpha_df(returns, g4.title, resample='A')
+#alpha_a.plot(grid=True, title='Yearly Alpha (vs SP500)')
+#plt.show()
+
+id = chart.chart([r, r2],
+[['r', 'red', 'Top 10'], ['g', 'green', 'Nvidia']],
+'Comparing Nvidia to crypto')
+chart.show(id)
+
+alpha_id = chart.chart_alpha([r, r2],
+[['r', 'red', 'Top 10'], ['g', 'green', 'Nvidia']])
+
+chart.show(alpha_id)
