@@ -118,15 +118,15 @@ short_vxx = stock_static_hold(['VXX'], w=[1], short=True)
 g3, r3 = fox.simulate(short_vxx, start_money, start=start_date, title='Short VXX')
 #hodl_voo = stock_static_hold(['VOO'],w=[1])
 #g4, r4 = fox.simulate(hodl_voo, start_money, start=start_date, title='SP500 (VOO)')
-"""top_10eq_rb = create_ranked(0,10)
+top_10eq_rb = create_ranked(0,10)
 g5, r5 = fox.simulate(top_10eq_rb, start_money, start=start_date, title='Top 10 Crypto (Weekly re.)')
 shit_150_500eq = coin_static_hold(150,500)
 g6, r6 = fox.simulate(shit_150_500eq, start_money, start=start_date, title='Crypto 150-500 (Static)')
 shit_150_500eq_rb = create_ranked(150,500)
-g7, r7 = fox.simulate(shit_150_500eq_rb, start_money, start=start_date, title='Crypto 150-500 (Weekly re.)')"""
+g7, r7 = fox.simulate(shit_150_500eq_rb, start_money, start=start_date, title='Crypto 150-500 (Weekly re.)')
 
-reports = [r,r2,r3]
-titles = [g.title, g2.title, g3.title]
+reports = [r,r2,r3,r5,r6,r7]
+titles = [g.title, g2.title, g3.title, g5.title, g6.title, g7.title]
 returns = chart.returns_df(reports, titles)
 returns.plot(grid=True, title='Normalized Returns')
 returns.plot(grid=True, logy=True, title='Normalized Returns (Log Scale)')
@@ -138,12 +138,22 @@ plt.show()
 #alpha_a.plot(grid=True, title='Yearly Alpha (vs SP500)')
 #plt.show()
 
-id = chart.chart([r, r2],
-[['r', 'red', 'Top 10'], ['g', 'green', 'Nvidia']],
+id = chart.chart([r, r3, r5, r6, r7, r2],
+[['r', 'red', 'Top 10'],
+['b', 'blue', 'Short VXX'],
+['c', 'cyan', 'Top 10 - Weekly Rebalance'],
+['m', 'magenta', '150-500'],
+['y', 'yellow', '150-500 - Weekly Rebalance'],
+['g', 'green', 'Nvidia - Control']],
 'Comparing Nvidia to crypto')
 chart.show(id)
 
 alpha_id = chart.chart_alpha([r, r2],
-[['r', 'red', 'Top 10'], ['g', 'green', 'Nvidia']])
+[['r', 'red', 'Top 10'],
+['b', 'blue', 'Short VXX'],
+['c', 'cyan', 'Top 10 - Weekly Rebalance'],
+['m', 'magenta', '150-500'],
+['y', 'yellow', '150-500 - Weekly Rebalance'],
+['g', 'green', 'Nvidia - Control']])
 
 chart.show(alpha_id)
