@@ -50,20 +50,24 @@ def setup():
     time.time()-start_time))
 
 class Game():
-  def __init__(self, starting_balance, start, end, interval):
+  def __init__(self, starting_balance, start, end, interval, title="Untitled"):
     #starting_balance - how much in USD
     #start/end - datetime objects
     #interval - datetime.timedelta object (should match data)
-    self.balances = dict() # ticker_id -> amount owned (in shares/coins, not USD)
+    self.balances = {} # ticker_id -> amount owned (in shares/coins, not USD)
     self.balances['USD'] = starting_balance
-
+    self.stop_loss = {}
+    self.avg_price = {}
     for ticker in ticker_ids:
       self.balances[ticker] = 0
+      self.stop_loss[ticker] = 0
+      self.avg_price[ticker] = 0
     self.now = start
     self.start = start
     self.end = end
     self.interval = interval
     self.invested = starting_balance
+    self.title = title
 
     if start < UNIVERSE_START:
       raise ValueError("Start date {0} is before UNIVERSE_START of {1}".format(
@@ -119,8 +123,16 @@ class Game():
     price_USD = self.price_now(ticker_id)
     amount_ticker = (amount_USD/price_USD)*TRADE_EFFICIENCY
     print("Bought {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
+    
+    #Update avg price, balances, and set correct stop loss
+    entry_value_before = self.balances[ticker_id]*self.avg_price[ticker_id]
+    entry_value_after = entry_value_before + amount_USD
     self.balances[ticker_id] += amount_ticker
+    self.avg_price[ticker_id] = entry_value_after / self.balances[ticker_id]
     self.balances['USD'] -= amount_USD
+
+    #Stop loss currently takes most recent price and is not stacked
+    self.stop_loss[ticker_id] = STOP_LOSS*price_USD 
 
   #Same as buy, but in reverse.
   def sell(self, ticker_id, amount_ticker):
@@ -129,6 +141,8 @@ class Game():
     price_USD = self.price_now(ticker_id)*TRADE_EFFICIENCY
     amount_USD = (amount_ticker*price_USD)
     print("Sold {0:.3f} {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
+    
+    #Update balances. Avg price and stoploss not affected.
     self.balances[ticker_id] -= amount_ticker
     self.balances['USD'] += amount_USD
 
@@ -136,8 +150,14 @@ class Game():
     price_USD = self.price_now(ticker_id)
     amount_ticker = (amount_USD/price_USD)*SHORT_EFFICIENCY #more to cover = fee
     print("Short sold {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
+    
+    #Update balances and average price. Set stop loss.
+    entry_value_before = -1*self.balances[ticker_id]*self.avg_price[ticker_id] #neg*neg*pos = pos
+    entry_value_after = entry_value_before + amount_USD*SHORT_EFFICIENCY #more positive
     self.balances[ticker_id] -= amount_ticker
+    self.avg_price = entry_value_after / (-1*self.balances[ticker_id])
     self.balances['USD'] += amount_USD
+    self.stop_loss[ticker_id] = ((1-STOP_LOSS)+1)*price_USD
 
   def short_buy(self, ticker_id, amount_ticker):
     price_USD = self.price_now(ticker_id)
@@ -181,7 +201,7 @@ def simulate(
     end = UNIVERSE_END-interval*BUFFER
 
   #Initialize Game and Reporting
-  game = Game(starting_balance, start, end, interval)
+  game = Game(starting_balance, start, end, interval, title)
   reports = {'time' : []} #x-axis
   for r in report_types: #y-axes
     reports[r] = []

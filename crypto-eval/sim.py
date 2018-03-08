@@ -1,6 +1,7 @@
 import fox
 import datetime as dt
 import matplotlib.pyplot as plt
+import chart
 fox.setup()
 
 def coin_static_hold(start_rank, stop_rank, weigh_by_cap = False):
@@ -52,16 +53,29 @@ def stock_static_hold(tickers, w=None, short=False):
 				if not short:
 					game.buy(ticker, allotment)
 				else:
-					game.balances['USD'] = 0 #Only short!
 					game.short_sell(ticker, allotment)
 	return result
 
+start_money = 10000
+start_date = dt.datetime(2017,1,1)
 
-short_vxx = stock_static_hold(['VXX'], w=[1], short=True)
-g3, r3 = fox.simulate(short_vxx,10000, start=dt.datetime(2017,1,1), title='Short VXX')
+
 top_10eq = coin_static_hold(0,10)
-g,r = fox.simulate(top_10eq,10000, start=dt.datetime(2017,1,1), title='Top 10 Crypto')
+g,r = fox.simulate(top_10eq, start_money, start=start_date, title='Top 10 Crypto')
 hodl_nvda = stock_static_hold(['NVDA'],w=[1])
-g2,r2 = fox.simulate(hodl_nvda,10000, start=dt.datetime(2017,1,1), title='NVDA Hodl')
+g2,r2 = fox.simulate(hodl_nvda, start_money, start=start_date, title='NVDA')
+short_vxx = stock_static_hold(['VXX'], w=[1], short=True)
+g3, r3 = fox.simulate(short_vxx, start_money, start=start_date, title='Short VXX')
+hodl_voo = stock_static_hold(['VOO'],w=[1])
+g4, r4 = fox.simulate(hodl_voo, start_money, start=start_date, title='SP500 (VOO)')
 
-
+reports = [r,r2,r3,r4]
+titles = [g.title, g2.title, g3.title, g4.title]
+returns = chart.returns_df(reports, titles)
+returns.plot(grid=True, title='Normalized Returns')
+returns.plot(grid=True, logy=True, title='Normalized Returns (Log Scale)')
+plt.show()
+alpha_m = chart.alpha_df(returns, g4.title)
+alpha_m.plot(grid=True, title='Monthly Alpha')
+alpha_a = chart.alpha_df(returns, g4.title, resample='A')
+print(alpha_a)

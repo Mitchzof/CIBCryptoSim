@@ -21,10 +21,11 @@ import datetime as dt
 import pandas as pd
 from time import sleep
 import re
+import sys
 
 DATA_FOLDER = "./data"
 STOP_RANK = 1000 #Changes to this var require setting CACHE = False to update
-CACHE = False
+CACHE = True
 DO_PRINT = True
 ALPHAVANTAGE_API_KEY = 'DNIYDNFQRBRGIT6H'
 #Other vars below
@@ -120,7 +121,7 @@ def save_all_cmc_ticker_info(ticker_list_path = None, ticker_list=None, wait_sec
       print(ticker + " | ERROR fetching/saving data | " +str(e))
 
 #Phase Stocks-1: Hardcoded ticker list (for now)
-stocks = ['NVDA','AMD','TSM','VXX']
+stocks = ['NVDA','AMD','TSM','VXX', 'VOO']
 
 #Phase Stocks-2: Download historical data for each ticker.
 AV_TICKERDATA_DIR = CMC_TICKERDATA_DIR
@@ -130,7 +131,7 @@ def save_stock_ticker_info(ticker_id, path=AV_TICKERDATA_DIR, try_cache = CACHE,
   full_path = os.path.join(path, "stock_"+ticker_id+'.csv')
   if try_cache and os.path.exists(full_path):
     return
-  fetch_url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={0}&outputsize=full&apikey={1}&datatype=csv"
+  fetch_url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={0}&outputsize=full&apikey={1}&datatype=csv"
   df = pd.read_csv(fetch_url.format(ticker_id, api_key))
   df['date'] = pd.to_datetime(df['timestamp'])
   df['asset_type'] = "stock"
@@ -170,12 +171,24 @@ def purge(folder, pattern):
 #Execution
 
 if __name__ == "__main__":
-  print("Phase 1: Downloading ticker lists...")
-  coins = get_cmc_tickers()
+  #Ask user for confirmation before deleting data files if CACHE == False
+  if CACHE == False:
+    x = None
+    while True:
+      x = input("Cache is set to False. This will purge all existing data. Proceed? (y/n): ")
+      if (x == 'y') or (x == 'n'):
+        break
+      else:
+        print("Invalid value. Valid inputs are 'y' and 'n'")
+    if x == 'n':
+      sys.exit('User did not want purge existing data')
+
+  #print("Phase 1: Downloading ticker lists...")
+  #coins = get_cmc_tickers()
   stocks = stocks
-  print("Success. Downloaded {0} ticker ids from coinmarketcap".format(len(coins)))
-  print("Phase 2A: Downloading coin data...")
-  save_all_cmc_ticker_info(ticker_list = coins)
+  #print("Success. Downloaded {0} ticker ids from coinmarketcap".format(len(coins)))
+  #print("Phase 2A: Downloading coin data...")
+  #save_all_cmc_ticker_info(ticker_list = coins)
   print("Phase 2B: Fetching stock data...".format(len(stocks)))
   save_all_stock_ticker_info(stocks)
 
