@@ -33,7 +33,7 @@ def setup():
   frames = [pd.read_csv(os.path.join(PRICES_DIR, f)) for f in ticker_csvs]
   ticker_data = {}
   ticker_ids = []
-  
+
   #Process from stored format to read to use format
   for dataframe in frames:
     dataframe['date'] = pd.to_datetime(dataframe['date'], format="%Y, %m, %d, %H, %M")
@@ -85,10 +85,7 @@ class Game():
   #Gets current price of ticker_id, if not available it will average between nearest 2 previous and future prices
   def price_now(self, ticker_id):
     df = ticker_data[ticker_id]
-    if ticker_id in cryptotickers['name']:
-      use_col = 'close'
-    else:
-      use_col = 'adjusted_close'
+    use_col = 'close'
     if self.now in df.index:
       return df[df.index==self.now][use_col][0]
     else: #Can't sell today. Take average of closest price before and after.
@@ -115,7 +112,7 @@ class Game():
   def buy(self, ticker_id, amount_USD):
     #if amount_USD > self.balances['USD']:
     #  raise ValueError("Purchase failed, insufficient USD balance")
-    
+
     price_USD = self.price_now(ticker_id)
     amount_ticker = (amount_USD/price_USD)*TRADE_EFFICIENCY
     print("Bought {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
@@ -209,4 +206,3 @@ def simulate(
   print("{0} : {1:.3f}".format(game.now,reports['value'][-1]))
   print("{0} : Fox simulate completed in {1:.3f}s\n".format(title, time.time()-start_time))
   return (game, reports)
-
