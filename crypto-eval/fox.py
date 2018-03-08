@@ -89,7 +89,9 @@ class Game():
   #Gets current price of ticker_id, if not available it will average between nearest 2 previous and future prices
   def price_now(self, ticker_id):
     df = ticker_data[ticker_id]
-    use_col = 'close'
+    use_col = 'adjusted_close'
+    if ticker_id in cryptotickers['name']:
+      use_col = 'close'
     if self.now in df.index:
       return df[df.index==self.now][use_col][0]
     else: #Can't sell today. Take average of closest price before and after.
@@ -119,7 +121,7 @@ class Game():
 
     price_USD = self.price_now(ticker_id)
     amount_ticker = (amount_USD/price_USD)*TRADE_EFFICIENCY
-    print("Bought {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
+    dprint("Bought {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
     
     #Update avg price, balances, and set correct stop loss
     entry_value_before = self.balances[ticker_id]*self.avg_price[ticker_id]
@@ -137,7 +139,7 @@ class Game():
     #  raise ValueError("Sell failed, insufficient {0} balance".format(ticker_id))
     price_USD = self.price_now(ticker_id)*TRADE_EFFICIENCY
     amount_USD = (amount_ticker*price_USD)
-    print("Sold {0:.3f} {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
+    dprint("Sold {0:.3f} {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
     
     #Update balances. Avg price and stoploss not affected.
     self.balances[ticker_id] -= amount_ticker
@@ -146,7 +148,7 @@ class Game():
   def short_sell(self, ticker_id, amount_USD):
     price_USD = self.price_now(ticker_id)
     amount_ticker = (amount_USD/price_USD)*SHORT_EFFICIENCY #more to cover = fee
-    print("Short sold {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
+    dprint("Short sold {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
     
     #Update balances and average price. Set stop loss.
     entry_value_before = -1*self.balances[ticker_id]*self.avg_price[ticker_id] #neg*neg*pos = pos
@@ -159,7 +161,7 @@ class Game():
   def short_buy(self, ticker_id, amount_ticker):
     price_USD = self.price_now(ticker_id)
     amount_USD = (amount_ticker*price_USD)*SHORT_EFFICIENCY #more to pay back = fee
-    print("Short bought {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
+    dprint("Short bought {0:.3f} of {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
     self.balances[ticker_id] += amount_ticker
     self.balances['USD'] -= amount_USD
 
@@ -174,6 +176,10 @@ class Game():
   #Current alpha
   def return_rate_now(self):
     return self.get_portfolio_value()/self.invested
+
+def dprint(msg, debug=False):
+  if debug:
+    print(msg)
 
 def simulate(
   strategy,
