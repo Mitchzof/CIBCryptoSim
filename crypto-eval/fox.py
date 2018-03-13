@@ -89,7 +89,9 @@ class Game():
   #Gets current price of ticker_id, if not available it will average between nearest 2 previous and future prices
   def price_now(self, ticker_id):
     df = ticker_data[ticker_id]
-    use_col = 'close'
+    use_col = 'adjusted_close'
+    if ticker_id in cryptotickers['name']:
+      use_col = 'close'
     if self.now in df.index:
       return df[df.index==self.now][use_col][0]
     else: #Can't sell today. Take average of closest price before and after.
@@ -228,5 +230,6 @@ def simulate(
 
   #Sim over, return results
   print("{0} : {1:.3f}".format(game.now,reports['value'][-1]))
-  print("{0} : Fox simulate completed in {1:.3f}s\n".format(title, time.time()-start_time))
+  print("Fox simulate completed")
+  #print("{0} : Fox simulate completed in {1:.3f}s\n".format(title, time.time()-start_time))
   return (game, reports)
