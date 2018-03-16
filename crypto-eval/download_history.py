@@ -22,6 +22,7 @@ import pandas as pd
 from time import sleep
 import re
 import sys
+import urllib.request
 
 DATA_FOLDER = "./data"
 STOP_RANK = 1000 #Changes to this var require setting CACHE = False to update

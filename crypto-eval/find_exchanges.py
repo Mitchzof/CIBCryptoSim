@@ -86,13 +86,13 @@ print(ex_coins)
 top_names = []
 top_counts = []
 top_coins = []
-preffered_ex = ['Cryptopia','Poloniex','Bittrex','Binance'] #higher priority towards the end
-
+preffered_ex = ['Binance'] #higher priority towards the end
+blacklist_ex = ['Bittrex','Cryptopia','OKEx']
 # Filter out bad exchanges
 raw_data = dict(ex_coins)
 data = {}
 for d in raw_data.keys():
-	if hasattr(ccxt,d.lower()):
+	if hasattr(ccxt,d.lower()) and d not in blacklist_ex:
 		data[d] = raw_data[d]
 
 # Main loop
@@ -106,8 +106,9 @@ for i in range(len(data.keys())):
 	# Break loop once out of exchanges or count becomes too low
 	if exchange == None or count < 5:
 		break
-
-	blacklist = data[exchange].keys()
+	blacklist = list(data[exchange].keys())
+	if 'count' in blacklist:
+		blacklist.remove('count')
 	top_names.append(exchange)
 	top_counts.append(count)
 	top_coins.append(list(blacklist))
@@ -128,62 +129,22 @@ for i in range(len(top_names)):
 # Previous results
 # March 13, 150-500
 
-# Binance - 38
-# Bittrex - 75
-# Poloniex - 2
-# Cryptopia - 28
-# Cobinhood - 1
-# Kucoin - 33
-# OKEx - 23
-# HitBTC - 13
-# Liqui - 9
+# Binance - 15
+# HitBTC - 40
+# Kucoin - 28
+# Poloniex - 21
+# Liqui - 7
 # Bibox - 7
-# CoinExchange - 6
-# Huobi - 4
-# Livecoin - 3
-# CoinEgg - 2
-# YoBit - 2
-# Tidex - 1
-# Qryptos - 1
+# CoinExchange - 7
+# Livecoin - 5
 
-# Binance - ['count', 'adx-net', 'ethlend', 'poa-network', 'bluzelle', 'sonm', 'simple-token', 'amber', 'vibe',
-#			 'red-pulse', 'wings', 'ripio-credit-network', 'eidoo', 'singulardtv', 'blockmason', 'ins-ecosystem',
-#			 'bread', 'wabi', 'appcoins', 'cybermiles', 'viacoin', 'airswap', 'etherparty', 'modum', 'gifto', 
-#			 'centra', 'district0x', 'lunyr', 'tierion', 'viberate', 'triggers', 'blox', 'everex', 'monetha', 
-#			 'aeron', 'yoyow', 'agrello-delta', 'moeda-loyalty-points', 'oax']
-# Bittrex - ['feathercoin', 'ion', 'bitbay', 'peercoin', 'einsteinium', 'quantum-resistant-ledger', 'burst', 
-#			 'library-credit', 'cloakcoin', 'counterparty', 'gulden', 'groestlcoin', 'aeon', 'crown', 'adtoken',
-#			 'synereo', 'bean-cash', 'decent', 'humaniq', 'cofound-it', 'voxels', 'potcoin', 'sibcoin', 'unikoin-gold',
-#			 'shift', 'mercury', 'steem-dollars', 'zclassic', 'numeraire', 'iocoin', 'diamond', 'vericoin', 
-#			 'blackcoin', 'elastic', 'guppy', 'faircoin', 'blocktix', 'trust', 'florincoin', 'gridcoin', 'expanse', 
-#		     'omni', 'hempcoin', 'firstblood', 'solarcoin', 'radium', 'monetaryunit', 'bitsend', 'clams', 'incent', 
-#			 'energycoin', 'rubycoin', 'swarm-city', 'databits', 'auroracoin', 'okcash', 'myriad', 'lomocoin', 
-#			 'musicoin', 'golos', 'neoscoin', 'patientory', 'transfercoin', 'nexium', 'syndicate', 'nubits', 
-#			 'foldingcoin', 'dynamic', 'tokes', 'circuits-of-value', 'stealthcoin', 'internet-of-people', 'bitcrystals',
-#			 'pinkcoin', 'sphere', 'dopecoin', 'count']
-# Poloniex - ['pascal-coin', 'primecoin', 'bitmark', 'count']
-# Cryptopia - ['spankchain', 'xtrabytes', 'unobtanium', 'flash', 'zap', 'ormeus-coin', 'cappasity', 'deeponion', 
-#			   'mintcoin', 'mothership', 'zoin', 'nolimitcoin', 'posw-coin', 'divi', 'alis', 'mybit-token', 
-#	    	   'universal-currency', 'investfeed', 'phore', 'everus', 'spectrecoin', 'gobyte', 'asiacoin', 'decent-bet',
-#			   'bismuth', 'blockcat', 'linda', 'luxcoin', 'dubaicoin-dbix', 'count']
-# Cobinhood - ['universa', 'cobinhood', 'count']
-# Kucoin - ['telcoin', 'jibrel-network', 'iot-chain', 'deepbrain-chain', 'utrust', 'kickico', 'data', 'decision-token',
-#		    'trinity-network-credit', 'qlink', 'medical-chain', 'blockport', 'zeepin', 'latoken', 'swissborg', 
-#	   	    'suncontract', 'iht-real-estate-protocol', 'selfkey', 'odyssey', 'dadi', 'restart-energy-mwat', 'covesting',
-#		    'canyacoin', 'carvertical', 'snovio', 'chronobank', 'coinfi', 'hacken', 'axpire', 'ebtcnew', 'solaris', 
-#			'sportyco', 'bounty0x', 'cargox', 'count']
-# OKEx - ['smartmesh', 'naga', 'delphy', 'refereum', 'game', 'bankex', 'datum', 'internet-node-token', 'qunqun', 
-#		  'trade-token', 'hi-mutual-society', 'swftcoin', 'encrypgen', 'all-sports', 'true-chain', 'olympus-labs', 
-#	   	  'prochain', 'hydro-protocol', 'primas', 'measurable-data-token', 'oneroot-network', 'worldcore', 'aventus', 
-#		  'leverj', 'count']
-# HitBTC - ['c20', 'metaverse', 'indahash', 'hive-project', 'presearch', 'attention-token-of-media', 'paragon', 
-#	   		'blackmoon', 'lamden', 'icos', 'ixledger', 'hackspace-capital', 'airtoken', 'life', 'count']
-# Liqui - ['melon', 'mobilego', 'taas', 'wepower', 'tokencard', 'nimiq', 'propy', 'neumark', 'stox', 'mysterium', 'count']
-# Bibox - ['medibloc', 'bibox-token', 'bottos', 'cpchain', 'bloomtoken', 'bitclave', 'change', 'spectre-utility', 'count']
-# CoinExchange - ['experience-points', 'eccoin', 'uquid-coin', 'bitconnect', 'espers', 'elixir', 'b3coin', 'count']
-# Huobi - ['medishares', 'linkeye', 'stk', 'coinmeet', 'echolink', 'count']
-# Livecoin - ['namecoin', 'soarcoin', 'polybius', 'curecoin', 'count']
-# CoinEgg - ['ink', 'energo', 'qbao', 'count']
-# YoBit - ['newyorkcoin', 'e-dinar-coin', 'draftcoin', 'count']
-# Tidex - ['waves-community-token', 'tiesdb', 'count']
-# Qryptos - ['rock', 'eztoken', 'count']
+# Binance - ['poa-network', 'bluzelle', 'sonm', 'simple-token', 'vibe', 'amber', 'singulardtv', 'wabi', 'appcoins', 'etherparty', 'gifto', 'blox', 'triggers', 'monetha', 'aeron', 'agrello-delta']
+# HitBTC - ['envion', 'c20', 'origintrail', 'eidoo', 'utrust', 'universa', 'naga', 'metaverse', 'kickico', 'tierion', 'centra', 'hive-project', 'indahash', 'presearch', 'paragon', 'attention-token-of-media', 'nimiq', 'swissborg', 'suncontract', 'domraider', 'blackmoon', 'lamden', 'latoken', 'icos', 'propy', 'ixledger', 'coinpoker', 'chronobank', 'hackspace-capital', 'quantum', 'stox', 'airtoken', 'lockchain', 'ebtcnew', 'polybius', 'matryx', 'sportyco', 'hellogold', 'worldcore', 'life']
+# Kucoin - ['telcoin', 'jibrel-network', 'red-pulse', 'deepbrain-chain', 'data', 'modum', 'trinity-network-credit', 'decision-token', 'qlink', 'medical-chain', 'blockport', 'zeepin', 'stk', 'iht-real-estate-protocol', 'odyssey', 'restart-energy-mwat', 'covesting', 'canyacoin', 'carvertical', 'snovio', 'coinfi', 'hacken', 'axpire', 'solaris', 'bounty0x', 'change', 'cargox', 'elixir']
+# Poloniex - ['peercoin', 'burst', 'library-credit', 'counterparty', 'viacoin', 'synereo', 'potcoin', 'steem-dollars', 'vericoin', 'blackcoin', 'omni', 'florincoin', 'expanse', 'primecoin', 'pascal-coin', 'clams', 'neoscoin', 'nexium', 'foldingcoin', 'pinkcoin', 'bitcrystals']
+# Liqui - ['melon', 'mobilego', 'taas', 'wepower', 'tokencard', 'neumark', 'mysterium']
+# Bibox - ['medibloc', 'bibox-token', 'bottos', 'cpchain', 'bloomtoken', 'bitclave', 'spectre-utility']
+# CoinExchange - ['experience-points', 'eccoin', 'uquid-coin', 'bitconnect', 'shield-xsh', 'b3coin', 'espers']
+# Livecoin - ['namecoin', 'soarcoin', 'insurepal', 'rialto', 'curecoin']
+
+

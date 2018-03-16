@@ -1,6 +1,7 @@
 import fox
 import datetime as dt
 import matplotlib.pyplot as plt
+import numpy as np
 import chart
 import math
 
@@ -71,7 +72,7 @@ def create_ranked(
 		if seconds_since_epoch % seconds_in_interval == 0:
 			market = game.crypto_by_marketcap()
 			coins_of_interest = market['ticker_id'].tolist()[start_rank:stop_rank]
-			target_per_coin = math.floor(100*game.get_portfolio_value()/len(coins_of_interest))/100.0 #floor to safe divide to lowest cent USD
+			target_per_coin = int(100*game.get_portfolio_value()/len(coins_of_interest))/100.0 #floor to safe divide to lowest cent USD
 
 			#Rebalance and stop loss
 			for coin, amount in game.balances.items():
@@ -125,6 +126,7 @@ g7, r7 = fox.simulate(shit_150_500eq_rb, start_money, start=start_date, title='C
 reports = [r,r2,r3,r4,r5,r6,r7]
 titles = [g.title, g2.title, g3.title, g4.title, g5.title, g6.title, g7.title]
 returns = chart.returns_df(reports, titles)
+returns['Low Cap Long, High Cap Short 50/50 (Weekly Re.)'] = returns[g7.title]-returns[g5.title]
 returns.plot(grid=True, title='Normalized Returns')
 returns.plot(grid=True, logy=True, title='Normalized Returns (Log Scale)')
 plt.show()

@@ -62,6 +62,8 @@ def get_balance(exchange_obj, kind):
 def get_balances(exchange_objs, kind='total'):
 	master_bal = {}
 	for e in exchange_objs:
+		if e.base != 'BTC':
+			raise NotImplementedError("Non-BTC base pairs not supported yet")
 		bal = get_balance(e, kind)
 		for curr,val in bal.items():
 			if curr not in master_bal:
@@ -141,7 +143,6 @@ def price(exchange_obj, pair, side, order_depth=None):
 		avg = total_val/total_amt
 		return avg
 
-
 # Wrapper function that executes a market buy on the exchange
 # Input: exchange object, pair (e.g. 'XRP/BTC'), amount_base (e.g. BTC), wait for confirmation (seconds)
 # Output: order success/fail
@@ -158,7 +159,7 @@ def exchange_market_buy(exchange_obj, pair, amount_base, wait=3):
 
 	if order['status'] != 'closed':
 		time.sleep(wait)
-		return bnb.fetch_order(order['id'])['status'] == 'closed'
+		return exchange_obj.fetch_order(order['id'])['status'] == 'closed'
 	return True
 
 # Same thing as sell but in the opposite direction
@@ -172,10 +173,12 @@ def exchange_market_sell(exchange_obj, pair, amount_coin, wait=3):
 
 	if order['status'] != 'closed':
 		time.sleep(wait)
-		return bnb.fetch_order(order['id'])['status'] == 'closed'
+		return exchange_obj.fetch_order(order['id'])['status'] == 'closed'
 	return True
 
-	
+#Convert from symbol to default pair for exchange
+def sym_to_pair(symbol, exchange_obj):
+	return symbol + exchange_obj.delim + exchange_obj.base
 
 
 	
