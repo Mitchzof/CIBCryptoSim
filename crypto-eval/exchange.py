@@ -15,30 +15,30 @@ import urllib.request
 KEYS_FILEPATH = 'key.json'
 
 def load_keys(filepath=KEYS_FILEPATH):
-	with open('key.json','r') as f:
-		keys = json.load(KEYS_FILEPATH)
+	with open(KEYS_FILEPATH,'r') as f:
+		keys = json.load(f)
 	return keys
 
 
 # Make ccxt exchange objects
 # Input: keys_data, e.g. loaded json file
-# Output: dictionary of {ccxt_id : ccxt exchange object}
-# Caution! Keys exposed in exchange objects
+# Output: list of ccxt exchange objects
+# Security caution! Keys exposed in exchange objects
 def make_exchange_objs(keys_data):
-	exchanges = {}
+	exchanges = []
 	for data in keys_data['exchanges']:
-		exchange = getattr(ccxt, data['ccxt_id'])
+		exchange = getattr(ccxt, data['ccxt_id'])()
 		exchange.apiKey = data['apikey']
 		exchange.secret = data['secret']
-		exchanges[data['ccxt_id']] = exchange
+		l = exchange.load_markets() # Load symbol data for each exchange
 	
-	# Set custom fields inside exchange object
-	# delim: Seperator between symbols, e.g. the '/' in BTC/USD
-	# base: The base currencies all trades are made in, e.g. the 'USD' in BTC/USD
-	for k in exchanges.keys():
-		exchange = exchanges[k]
+		# Set custom fields inside exchange object
+		# delim: Seperator between symbols, e.g. the '/' in BTC/USD
+		# base: The base currencies all trades are made in, e.g. the 'USD' in BTC/USD
 		exchange.delim = '/'
-		exchange.base = 'BTC' #Binance and others typically trade in BTC
+		exchange.base = 'BTC' #Typically BTC is enough, but dream big. 
+		exchanges.append(exchange)
+
 	return exchanges
 
 # Wrapper function to get total balance from exchange
@@ -62,8 +62,6 @@ def get_balance(exchange_obj, kind):
 def get_balances(exchange_objs, kind='total'):
 	master_bal = {}
 	for e in exchange_objs:
-		if e.base != 'BTC':
-			raise NotImplementedError("Non-BTC base pairs not supported yet")
 		bal = get_balance(e, kind)
 		for curr,val in bal.items():
 			if curr not in master_bal:

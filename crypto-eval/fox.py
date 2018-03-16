@@ -51,6 +51,21 @@ def setup():
     len(ticker_ids),
     time.time()-start_time))
 
+# Load up exchange information before starting
+def live_setup():
+  global exchange_objs
+  global coin_to_exchange
+
+  # Load exchange objects
+  keys = exchange.load_keys()
+  exchange_objs = exchange.make_exchange_objs(keys)
+
+  # Load coin to exchange info
+
+  
+  # Test authentication works on all exchanges
+  test_bal = exchange.get_balances(exchange_objs)
+
 class Game():
   def __init__(self, starting_balance, start, end, interval, title="Untitled"):
     #starting_balance - how much in USD
@@ -187,7 +202,15 @@ class Game_live():
     #start - time at which the script was started (if not <10s from now, a reboot occurred)
     #leniency - float in range (0,1] that is the "wiggle room" for any time related activity
       #e.g. 0.99 leniency --> 14 minutes over 24h, 3s over 5min. 
-    self.balances_btc = exchange.get_balances(exchange_objs)
+    self.exchange_objs = exchange_objs
+    self.coin_to_exchange = dict(coin_to_exchange) #make copy as we might make changes and this is a global var
+
+    self.balances = exchange.get_balances(exchange_objs) # {coin_id : val_base}
+    self.balances_by_exchange_total = {} # {exchange_obj : {coin_id : val_base}}
+    self.balances_by_exchange_free = {} # ditto
+    for ex in exchange_objs:
+      self.balances_by_exchange_total[ex] = exchange.get_balance(ex,'total')
+      self.balances_by_exchange_free[ex] = exchange.get_balance(ex,'free')
     self.stop_loss = {} # {coin_id : price_USD}
     self.avg_price = {} # {coin_id : price_USD}
 
@@ -198,12 +221,21 @@ class Game_live():
     if self.now-start > dt.timedelta(seconds=10):
       #Start was more than 10 seconds ago, probably a reboot.
       #TODO: HANDLE REBOOTS
+      raise NotImplementedError('Reboots are not handled yet. Start time is more than 10s ago.')
 
   def check_update(self):
     now = dt.datetime.now()
     time_diff = now-self.last_update
     lower_bound = interval*leniency #e.g. 5min*0.99=4min,57sec
     if time_diff > lower_bound:
+      for ex in exchange_objs:
+        m = ex.load_markets(True) #Force reload of markets
+        self.balances_by_exchange_total[ex] = exchange.get_balance(ex, 'total')
+        self.balances_by_exchange_free[ex] = exchange.get_balance(ex,'free')
+      #Be lazy and just call fetch_balance on every exchange again
+      #TODO: be less lazy
+      self.balances = exchange.get_balances(self.exchange_objs)
+
       print(r"UPDATE NEEDED")
 
   #Dataframe of coinmarketcap data sorted by marketcap
@@ -221,19 +253,43 @@ class Game_live():
     #       dtype='object')
     return df
     
-  #Live price of symbol (e.g. 'XRP')
+  #Live price of symbol (e.g. 'XRP') in base curr (currently only BTC)
   def price_now(self, symbol):
-    exchange_obj = coin_to_exchange[symbol]
+    exchange_obj = self.coin_to_exchange[symbol]
+    assert exchange_obj.base == 'BTC', 'Exchange {0} - base currency not in BTC'.format(exchange_obj.id)
     pair = symbol + exchange_obj.delim + exchange_obj.base
     p = exchange.price(exchange_obj, pair, side='avg')
     return p
+
+  # Maps symbol->exchange_obj
+  # If no mapping found, attempts to find best exchange
+  def get_exchange_for(self,symbol):
+    # If already set, use this
+    if symbol in self.coin_to_exchange:
+      return self.coin_to_exchange[symbol]
+    # Otherwise pick supporting exchange with largest free balance in BTC
+    best_ex = None
+    best_btc = 0
+    for ex, bals in self.balances_by_exchange_free.items():
+      assert ex.base == 'BTC', 'Exchange {0} - base currency not in BTC'.format(ex.id)
+      pair = exchange.sym_to_pair(symbol, ex)
+      btc_bal = int(pow(10,7)*bal['BTC'])/pow(10,7)
+      if pair in ex.symbols and btc_bal > best_btc:
+        best_ex = ex
+        best_btc = btc_cal
+
+    self.coin_to_exchange[symbol] = best_ex
+    if best_ex == None:
+      raise NotImplementedError("Couldn't assign coin to exchange: {} - {}".format(symbol, best_ex.id))
+    print('Assigned coin to exchange: {} - {}'.format(symbol, best_ex.id))
+    return best_ex
 
   #Current value in BTC, estimate only for reporting, total funds held
   def get_portfolio_value_btc(self):
     self.check_update()
     total_value = 0
-    for coin, value in self.balances_btc.items():
-      total_value += value
+    for coin, amount in self.balances.items():
+      total_value += price_now(coin)*amount
     return total_value
 
   #Current value in USD, estimate only for reporting, total funds held
@@ -244,27 +300,17 @@ class Game_live():
 
   #Attempt a market buy
   def buy(self, symbol, amount_base):
-    exchange_obj = coin_to_exchange(symbol)
+    exchange_obj = self.coin_to_exchange(symbol)
     pair = exchange.sym_to_pair(symbol, exchange_obj)
     attempt = exchange.exchange_market_buy(exchange_obj, pair, amount_base)
     return attempt
 
   #Attempt a market sell
   def sell(self, symbol, amount_symbol, retry=0):
-    exchange_obj = coin_to_exchange(symbol)
+    exchange_obj = self.coin_to_exchange(symbol)
     pair = exchange.sym_to_pair(symbol, exchange_obj)
-    attempt = exchange.exchange_market_sell(exchange_objs, pair, amount_symbol)
+    attempt = exchange.exchange_market_sell(self.exchange_objs, pair, amount_symbol)
     return attempt
-
-    #if amount_ticker >  self.balances[ticker_id]:
-    #  raise ValueError("Sell failed, insufficient {0} balance".format(ticker_id))
-    price_USD = self.price_now(ticker_id)*TRADE_EFFICIENCY
-    amount_USD = (amount_ticker*price_USD)
-    dprint("Sold {0:.3f} {1} for {2:.3f} each".format(amount_ticker,ticker_id,price_USD))
-
-    #Update balances. Avg price and stoploss not affected.
-    self.balances[ticker_id] -= amount_ticker
-    self.balances['USD'] += amount_USD
 
   def short_sell(self, ticker_id, amount_USD):
     raise NotImplementedError('Shorting is not supported yet')
@@ -395,7 +441,7 @@ def live_trade(
     if strat_is_next:
       print("{0} | Strategy")
       strategy(game)
-      
+
   print("Main loop terminated. Trading has halted.")
 
 # Given a start datetime and a timedelta interval, calculate when the next interval starts
