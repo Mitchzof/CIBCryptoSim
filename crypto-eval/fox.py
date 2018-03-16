@@ -61,7 +61,7 @@ def live_setup():
   exchange_objs = exchange.make_exchange_objs(keys)
 
   # Load coin to exchange info
-
+  # :(
   
   # Test authentication works on all exchanges
   test_bal = exchange.get_balances(exchange_objs)
@@ -94,7 +94,7 @@ class Game():
         end))
 
   #Gives you a dataframe of the crypto tickers sorted by market cap at a specified time
-  def crypto_by_marketcap(self, at_time=None):
+  def crypto_by_market_cap(self, at_time=None):
     if at_time == None: #default is now
       at_time = self.now
 
@@ -217,6 +217,7 @@ class Game_live():
     self.now = dt.datetime.now()
     self.start = start
     self.interval = interval
+    self.leniency = leniency
     self.last_update = dt.datetime.now()
     if self.now-start > dt.timedelta(seconds=10):
       #Start was more than 10 seconds ago, probably a reboot.
@@ -226,7 +227,7 @@ class Game_live():
   def check_update(self):
     now = dt.datetime.now()
     time_diff = now-self.last_update
-    lower_bound = interval*leniency #e.g. 5min*0.99=4min,57sec
+    lower_bound = self.interval*self.leniency #e.g. 5min*0.99=4min,57sec
     if time_diff > lower_bound:
       for ex in exchange_objs:
         m = ex.load_markets(True) #Force reload of markets
@@ -236,14 +237,14 @@ class Game_live():
       #TODO: be less lazy
       self.balances = exchange.get_balances(self.exchange_objs)
 
-      print(r"UPDATE NEEDED")
+      print("Balances updated")
 
-  #Dataframe of coinmarketcap data sorted by marketcap
-  def crypto_by_marketcap(self, start_rank, stop_rank):
+  #Dataframe of coinmarketcap data sorted by market cap
+  def crypto_by_market_cap(self, start_rank, stop_rank):
     #Start rank - Starts at 1, inclusive
     #Stop rank - The bigger number, inclusive
     tickers_url = "https://api.coinmarketcap.com/v1/ticker/?start={0}&limit={1}"
-    tickers_url = tickers_url.format(start_rank,stop_rank-start_rank+1)
+    tickers_url = tickers_url.format(start_rank-1,stop_rank-start_rank)
     df = pd.read_json(tickers_url)
     # >>> df.columns
     # Index(['24h_volume_usd', 'available_supply', 'id', 'last_updated',
@@ -436,10 +437,10 @@ def live_trade(
 
     #Run code for update/strat/both
     if update_is_next:
-      print("{0} | Update")
+      print("{0} | Executing Update".format(next_update_dt))
       game.check_update()
     if strat_is_next:
-      print("{0} | Strategy")
+      print("{0} | Executing Strategy".format(next_strat_dt))
       strategy(game)
 
   print("Main loop terminated. Trading has halted.")

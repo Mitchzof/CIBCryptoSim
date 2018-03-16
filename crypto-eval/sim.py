@@ -5,6 +5,10 @@ import numpy as np
 import chart
 import math
 
+def live_do_nothing(game):
+	print("Doing nothing! Here's you're balance:")
+	print(game.balances)
+
 def coin_static_hold(start_rank, stop_rank, weigh_by_cap = False):
 	#Generates a top start# thru stop# hodl strategy
 	#Start = zero indexed, inclusive
@@ -101,12 +105,9 @@ def create_ranked(
 
 	return ranked
 
-
-
 fox.setup()
 start_money = 10000
 start_date = dt.datetime(2017,8,1)
-
 
 top_10eq = coin_static_hold(0,10)
 g,r = fox.simulate(top_10eq, start_money, start=start_date, title='Top 10 Crypto (Static)')
