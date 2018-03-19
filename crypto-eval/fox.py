@@ -5,6 +5,7 @@ import time
 import download_history as dh
 import exchange
 import logging
+from pprint import pprint
 
 CRYPTO_TICKERS = "./data/cryptotickers.csv"
 PRICES_DIR = "./data/prices"
@@ -18,6 +19,19 @@ TIME_DELTA = dt.timedelta(days=1) #Interval between data points
 UNIVERSE_START = dt.datetime(2014, 1, 1)
 UNIVERSE_END = dt.datetime.now()
 BUFFER = 10 #Number of intervals before UNIVERSE_END to cut off
+
+def floor(flt, prec=8):
+  # Returns floor of flt up to prec decimal places
+  return int(flt*pow(10,prec))/pow(10,prec)
+
+def floor_mult(flt1, flt2, prec=8):
+  return floor(floor(flt1,prec)*floor(flt2,prec),prec)
+
+def floor_div(flt1, flt2, prec=8):
+  return floor(floor(flt1,prec)/flt2, prec)
+
+def floor_add(flt1, flt2, prec=8):
+  return floor(floor(flt1,prec)+floor(flt2,prec))
 
 def setup():
   print("Fox Setup")
@@ -195,7 +209,7 @@ class Game():
 
 class Game_live():
   # WORK IN PROGRESS
-  def __init__(self, exchange_objs, coin_to_exchange, start, interval, leniency=0.99):
+  def __init__(self, exchange_objs, coin_to_exchange, start, interval, leniency=0.99, verbose=True):
     #exchange_objs - ccxt exchange objects
     #coin_to_exchange - dict of which exchange to use for each coin {coin : exchange_obj}
     #interval - update frequency to fetch new data, typically not the same as the strat interval!
@@ -219,16 +233,26 @@ class Game_live():
     self.interval = interval
     self.leniency = leniency
     self.last_update = dt.datetime.now()
+    self.check_update(force=True)
     if self.now-start > dt.timedelta(seconds=10):
       #Start was more than 10 seconds ago, probably a reboot.
       #TODO: HANDLE REBOOTS
       raise NotImplementedError('Reboots are not handled yet. Start time is more than 10s ago.')
 
-  def check_update(self):
+  def vprint(self, msg):
+    if self.verbose == True:
+      print(msg)
+
+  def check_update(self, force=False, diff_check=True):
     now = dt.datetime.now()
     time_diff = now-self.last_update
     lower_bound = self.interval*self.leniency #e.g. 5min*0.99=4min,57sec
-    if time_diff > lower_bound:
+    if time_diff > lower_bound or force:
+      if diff_check:
+        old_balances = dict(self.balances)
+        old_balances_by_exchange_total = dict(self.balances_by_exchange_total)
+        old_balances_by_exchange_free = dict(self.balances_by_exchange_free)
+
       for ex in exchange_objs:
         m = ex.load_markets(True) #Force reload of markets
         self.balances_by_exchange_total[ex] = exchange.get_balance(ex, 'total')
@@ -237,7 +261,26 @@ class Game_live():
       #TODO: be less lazy
       self.balances = exchange.get_balances(self.exchange_objs)
 
+      # Balance diffs
+      if diff_check:
+        bals_diff = dict_diff(self.balances, old_balances)
+        bal_total_diff = {}
+        bal_free_diff = {}
+
+        for ex in exchange_objs:
+          bal_total_diff[ex] = dict_diff(self.balances_by_exchange_total[ex], old_balances_by_exchange_total[ex])
+          bal_free_diff[ex] = dict_diff(self.balances_by_exchange_free[ex], old_balances_by_exchange_free[ex])
+        print('Balance Diffs (New-Old):')
+        print('\nTotals: \n----------')
+        pprint(bals_diff)
+        print('\nTotal by exchange: \n----------')
+        pprint(bal_total_diff)
+        print('\nFree bals by exchange: \n ----------')
+        pprint(bal_free_diff)
+
       print("Balances updated")
+      self.last_updated = now
+      
 
   #Dataframe of coinmarketcap data sorted by market cap
   def crypto_by_market_cap(self, start_rank, stop_rank):
@@ -256,7 +299,9 @@ class Game_live():
     
   #Live price of symbol (e.g. 'XRP') in base curr (currently only BTC)
   def price_now(self, symbol):
-    exchange_obj = self.coin_to_exchange[symbol]
+    if symbol == 'BTC': # Quick and dirty hack while in BTC-only stage
+      return 1
+    exchange_obj = self.get_exchange_for(symbol)
     assert exchange_obj.base == 'BTC', 'Exchange {0} - base currency not in BTC'.format(exchange_obj.id)
     pair = symbol + exchange_obj.delim + exchange_obj.base
     p = exchange.price(exchange_obj, pair, side='avg')
@@ -274,10 +319,10 @@ class Game_live():
     for ex, bals in self.balances_by_exchange_free.items():
       assert ex.base == 'BTC', 'Exchange {0} - base currency not in BTC'.format(ex.id)
       pair = exchange.sym_to_pair(symbol, ex)
-      btc_bal = int(pow(10,7)*bal['BTC'])/pow(10,7)
+      btc_bal = int(pow(10,7)*bals['BTC'])/pow(10,7)
       if pair in ex.symbols and btc_bal > best_btc:
         best_ex = ex
-        best_btc = btc_cal
+        best_btc = btc_bal
 
     self.coin_to_exchange[symbol] = best_ex
     if best_ex == None:
@@ -290,27 +335,27 @@ class Game_live():
     self.check_update()
     total_value = 0
     for coin, amount in self.balances.items():
-      total_value += price_now(coin)*amount
+      total_value += self.price_now(coin)*amount
     return total_value
 
   #Current value in USD, estimate only for reporting, total funds held
   def get_portfolio_value_usd(self):
     self.check_update()
     btc_usd = exchange.btc_to_usd()
-    return btc_usd*get_portfolio_value_btc()
+    return btc_usd*self.get_portfolio_value_btc()
 
   #Attempt a market buy
   def buy(self, symbol, amount_base):
-    exchange_obj = self.coin_to_exchange(symbol)
+    exchange_obj = self.get_exchange_for(symbol)
     pair = exchange.sym_to_pair(symbol, exchange_obj)
     attempt = exchange.exchange_market_buy(exchange_obj, pair, amount_base)
     return attempt
 
   #Attempt a market sell
   def sell(self, symbol, amount_symbol, retry=0):
-    exchange_obj = self.coin_to_exchange(symbol)
+    exchange_obj = self.get_exchange_for(symbol)
     pair = exchange.sym_to_pair(symbol, exchange_obj)
-    attempt = exchange.exchange_market_sell(self.exchange_objs, pair, amount_symbol)
+    attempt = exchange.exchange_market_sell(exchange_obj, pair, amount_symbol)
     return attempt
 
   def short_sell(self, ticker_id, amount_USD):
@@ -322,11 +367,37 @@ class Game_live():
   def adjust_balance(self, amount, ticker_id):
     raise NotImplementedError('Programmatic deposit/withdrawal is not supported yet')
 
+  def sell_everything(self):
+    for symbol, amount_symbol in self.balances.items():
+      self.sell(symbol, amount_symbol)
 
 # Helper Functions
 def dprint(msg, debug=False):
   if debug:
     print(msg)
+
+def dict_diff(d1, d2, join='outer', nonzero=True):
+  #Subtracts d1-d2 on each key
+  #join types:
+  #   'outer' : include diffs where key is not in other dict
+  #   'inner' : only include diffs with key is in both dicts
+  #   'left'  : only include diffs with key in at least d1
+  #   'right' : only include diffs with key in at least d2
+  #nonzero: only include nonzero diffs
+
+  keys = set(d1.keys()).union(set(d2.keys()))
+  diff = {}
+  for key in keys:
+    if key in d1 and key in d2:
+      d = d1[key]-d2[key]
+    elif key in d1 and join == 'left' or join == 'outer':
+      d = d1[key]
+    elif key in d2 and join == 'right' or join == 'outer':
+      d = d2[key]
+
+    if (not nonzero) or (d != 0):
+      diff[key] = d
+  return diff
 
 # Main sim loop for backtests
 def simulate(

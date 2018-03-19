@@ -136,7 +136,7 @@ def price(exchange_obj, pair, side, order_depth=None):
 		ask_avg = total_val/total_amt
 		return ask_avg
 	else:
-		total_val = sum([x[0]*x[1] for x in oderbook['bids']+orderbook['asks']])
+		total_val = sum([x[0]*x[1] for x in orderbook['bids']+orderbook['asks']])
 		total_amt = sum([x[1] for x in orderbook['bids']+orderbook['asks']])
 		avg = total_val/total_amt
 		return avg
@@ -147,11 +147,14 @@ def price(exchange_obj, pair, side, order_depth=None):
 # Need to test: buying with insufficient balance, what kind of error? what happens to order? how to fix?
 def exchange_market_buy(exchange_obj, pair, amount_base, wait=3):
 	symbol_to_base = price(exchange_obj, pair, 'ask')
-	amount_symbol = int(1000000*amount_base/symbol_to_base)/1000000
+	amount_symbol = exchange_obj.amount_to_lots(pair, amount_base/symbol_to_base)
+	if amount_symbol == 0:
+		print(f'WARNING | Buy ignored | Amt coin: {amount_symbol} | Pair: {pair} | Message: Below minimum lot size, buy too small to execute.')
+		return True # Buy ignored, too small
 	try:
-		order = exchange_obj.create_market_buy_order(pair, amount_base)
-	except ccxt.insufficientFunds:
-		print('{0},{1} - Market buy failed, insufficient funds. Nothing was purchased.'.format(
+		order = exchange_obj.create_market_buy_order(pair, amount_symbol)
+	except ccxt.InsufficientFunds:
+		print('{},{} - Market buy failed, insufficient funds. Nothing was purchased.'.format(
 			exchange_obj.id, pair))
 		return False
 
@@ -163,8 +166,12 @@ def exchange_market_buy(exchange_obj, pair, amount_base, wait=3):
 # Same thing as sell but in the opposite direction
 def exchange_market_sell(exchange_obj, pair, amount_coin, wait=3):
 	try:
+		amount_coin = exchange_obj.amount_to_lots(pair, amount_coin)
+		if amount_coin == 0:
+			print(f'WARNING | Sell ignored | Amt coin: {amount_coin} | Pair: {pair} | Message: Below minimum lot size, sell too small to execute.')
+			return True #sell ignored, too small
 		order = exchange_obj.create_market_sell_order(pair, amount_coin)
-	except ccxt.insufficientFunds:
+	except ccxt.InsufficientFunds:
 		print('{0},{1} - Market sell failed, insufficient funds. Nothing was sold.'.format(
 			exchange_obj.id, pair))
 		return False
