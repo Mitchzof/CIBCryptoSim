@@ -64,15 +64,16 @@ def create_ranked(
 				continue
 			amount_btc = game.price_now(symbol)*amount_symbol
 			ratio = amount_btc/target_per_coin
-			print(f"{symbol} | {ratio}")
 			if ratio > rebalance_ratio: # Too much of symbol
 				extra = (1-(1/ratio))*amount_symbol
 				s = game.sell(symbol, extra)
-				print('SELL | Sym: {} | Amount sym: {:.4f} | Success: {}'.format(symbol,extra,s))
+				print('SELL EXTRA | Sym: {} | Prev Ratio: {} | Amount sym: {:.4f} | Success: {}'.format(symbol,ratio,extra,s))
 			elif ratio < stop_loss: # Stop loss triggered, sell it all and add to blacklist
 				s = game.sell(symbol, amount_symbol)
-				print('SELL | Sym: {} | Amount sym: {:.4f} | Success: {}'.format(symbol,amount_symbol,s))
+				print('SELL ALL | Sym: {} | Prev Ratio: {} | Amount sym: {:.4f} | Success: {}'.format(symbol,ratio,amount_symbol,s))
 				blacklist[coin] = now + rebalance_interval*2
+			else:
+				print('IGNORE SELL | Sym: {} | Ratio: {} | Amount sym: {:.4f}'.format(symbol, ratio, amount_symbol))
 
 		# Make purchases
 		for coin in coins_of_interest:
@@ -88,12 +89,10 @@ def create_ranked(
 
 			amount_btc = amount_coin*game.price_now(coin)
 			ratio = amount_btc/target_per_coin
-			print(f'{coin} | Amount coin held: {amount_coin} | Amount btc worth: {amount_btc}')
-			print(f'Ratio: {ratio}')
 			if ratio < 0.99: # 1% tolerance, e.g. a ratio of 0.995 gets treated as >=1
 				purchase_btc = (1-ratio)*target_per_coin
-				print('Amount of btc worth of coin to buy: '+str(purchase_btc))
-				print('ATTEMPT BUY | Sym: {} | Amount sym: {}'.format(coin,amount_coin))
+				print('BUY | Sym: {} | Prev Raito: {:.4f} | Amount btc to-buy: {:.4f} | Amount btc held: {:.4f} '.format(
+					coin, ratio, purchase_btc, amount_btc))
 				b = game.buy(coin, purchase_btc)
 				print(b)
 

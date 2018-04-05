@@ -3,11 +3,7 @@ import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
 import chart
-import math
-
-def live_do_nothing(game):
-	print("Doing nothing! Here's you're balance:")
-	print(game.balances)
+import math 
 
 def coin_static_hold(start_rank, stop_rank, weigh_by_cap = False):
 	#Generates a top start# thru stop# hodl strategy
@@ -17,7 +13,7 @@ def coin_static_hold(start_rank, stop_rank, weigh_by_cap = False):
 	#E.g. static_hold(0,10) returns the top 10
 	def result(game):
 		if(game.now == game.start): #Only balance once
-			market = game.crypto_by_marketcap()
+			market = game.crypto_by_market_cap()
 			#print(market['ticker_id'].tolist())
 			n = stop_rank-start_rank
 			coins = market['ticker_id'].tolist()[start_rank:stop_rank]
@@ -74,7 +70,7 @@ def create_ranked(
 		seconds_since_epoch = (game.now-epoch).total_seconds()
 		seconds_in_interval = rebalance_interval.total_seconds()
 		if seconds_since_epoch % seconds_in_interval == 0:
-			market = game.crypto_by_marketcap()
+			market = game.crypto_by_market_cap()
 			coins_of_interest = market['ticker_id'].tolist()[start_rank:stop_rank]
 			target_per_coin = int(100*game.get_portfolio_value()/len(coins_of_interest))/100.0 #floor to safe divide to lowest cent USD
 

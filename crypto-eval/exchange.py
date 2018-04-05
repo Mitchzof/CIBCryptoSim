@@ -44,7 +44,7 @@ def make_exchange_objs(keys_data):
 # Wrapper function to get total balance from exchange
 # Used to calculate portfolio value
 # Input: CCXT exchange object, kind='total'/'free'/'used'
-# Output: Dict of all nonzero balances in the form of {coin : value}
+# Output: Dict of all aw balances in the form of {coin : value}
 # Caution! Don't use kind='total' for any buy/sell/rebalance since this ignores 'used'
 def get_balance(exchange_obj, kind):
 	bal = exchange_obj.fetch_balance()[kind]
@@ -148,13 +148,14 @@ def price(exchange_obj, pair, side, order_depth=None):
 def exchange_market_buy(exchange_obj, pair, amount_base, wait=3):
 	symbol_to_base = price(exchange_obj, pair, 'ask')
 	amount_symbol = exchange_obj.amount_to_lots(pair, amount_base/symbol_to_base)
+	print(amount_symbol)
 	if amount_symbol == 0:
 		print(f'WARNING | Buy ignored | Amt coin: {amount_symbol} | Pair: {pair} | Message: Below minimum lot size, buy too small to execute.')
 		return True # Buy ignored, too small
 	try:
 		order = exchange_obj.create_market_buy_order(pair, amount_symbol)
 	except ccxt.InsufficientFunds:
-		print('{},{} - Market buy failed, insufficient funds. Nothing was purchased.'.format(
+		print('{e},{} - Market buy failed, insufficient funds. Nothing was purchased.'.format(
 			exchange_obj.id, pair))
 		return False
 
